@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS sites (
   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX IF NOT EXISTS idx_sites_catelog_id ON sites(catelog_id);
+CREATE INDEX IF NOT EXISTS idx_sites_sort_order ON sites(sort_order);
+
 -- 待审核网站表
 CREATE TABLE IF NOT EXISTS pending_sites (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

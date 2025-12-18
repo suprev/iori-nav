@@ -32,8 +32,24 @@ function normalizeSortOrder(val) {
   return Number.isFinite(num) ? num : 9999;
 }
 
+let indexesChecked = false;
+
 export async function onRequest(context) {
   const { request, env } = context;
+  
+  // 自动确保索引存在（每个 Worker 实例只执行一次）
+  if (!indexesChecked) {
+    try {
+      await env.NAV_DB.batch([
+        env.NAV_DB.prepare("CREATE INDEX IF NOT EXISTS idx_sites_catelog_id ON sites(catelog_id)"),
+        env.NAV_DB.prepare("CREATE INDEX IF NOT EXISTS idx_sites_sort_order ON sites(sort_order)")
+      ]);
+      indexesChecked = true;
+    } catch (e) {
+      console.error('Failed to ensure indexes:', e);
+    }
+  }
+
   const url = new URL(request.url);
   const catalog = url.searchParams.get('catalog');
 
@@ -483,17 +499,17 @@ export async function onRequest(context) {
   const templateResponse = await env.ASSETS.fetch(new URL('/index.html', request.url));
   let html = await templateResponse.text();
   
-  // Custom Wallpaper Logic
+  // 自定义壁纸逻辑
   const safeWallpaperUrl = sanitizeUrl(layoutCustomWallpaper);
   if (safeWallpaperUrl) {
       const blurStyle = layoutEnableBgBlur ? `filter: blur(${layoutBgBlurIntensity}px);` : '';
-      // We use a pseudo-element like div for background to allow blur without affecting content
+      // 使用单独的 div 作为背景层，以便在不影响内容的情况下应用虚化滤镜
       const bgLayerHtml = `<div style="position: fixed; inset: 0; z-index: -10; background-image: url('${safeWallpaperUrl}'); background-size: cover; background-attachment: fixed; background-position: center; ${blurStyle}"></div>`;
       
       html = html.replace('<body class="bg-secondary-50 font-sans text-gray-800">', `<body class="bg-secondary-50 font-sans text-gray-800 relative">${bgLayerHtml}`);
   }
   
-  // Inject Frosted Glass CSS Variable
+  // 注入毛玻璃效果的 CSS 变量
   if (layoutEnableFrostedGlass) {
       const cssVarInjection = `<style>:root { --frosted-glass-blur: ${layoutFrostedGlassIntensity}px; }</style>`;
       html = html.replace('</head>', `${cssVarInjection}</head>`);

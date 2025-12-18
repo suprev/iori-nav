@@ -1,8 +1,25 @@
 // functions/api/config/index.js
 import { isAdminAuthenticated, errorResponse, jsonResponse, normalizeSortOrder } from '../../_middleware';
 
+let indexesChecked = false;
+
 export async function onRequestGet(context) {
   const { request, env } = context;
+  
+  // 自动确保索引存在（每个 Worker 实例只执行一次）
+  if (!indexesChecked) {
+    try {
+      await env.NAV_DB.batch([
+        env.NAV_DB.prepare("CREATE INDEX IF NOT EXISTS idx_sites_catelog_id ON sites(catelog_id)"),
+        env.NAV_DB.prepare("CREATE INDEX IF NOT EXISTS idx_sites_sort_order ON sites(sort_order)")
+      ]);
+      indexesChecked = true;
+    } catch (e) {
+      console.error('Failed to ensure indexes:', e);
+      // 继续执行，不要因为索引创建失败而阻塞主逻辑
+    }
+  }
+
   const url = new URL(request.url);
   
   const catalog = url.searchParams.get('catalog');
@@ -54,8 +71,16 @@ export async function onRequestGet(context) {
     }
 
     const { results } = await env.NAV_DB.prepare(query).bind(...queryBindParams).all();
-    const countResult = await env.NAV_DB.prepare(countQuery).bind(...countQueryParams).first();
-    const total = countResult ? countResult.total : 0;
+    
+    // 优化：如果 pageSize 很大（通常是“获取全部”场景），则跳过 COUNT 查询
+    // 这种情况下，客户端通常不需要精确的总数来进行分页
+    let total = 0;
+    if (pageSize >= 1000) {
+        total = results.length + offset; // 返回当前页结果数加上偏移量
+    } else {
+        const countResult = await env.NAV_DB.prepare(countQuery).bind(...countQueryParams).first();
+        total = countResult ? countResult.total : 0;
+    }
 
     return jsonResponse({
       code: 200,

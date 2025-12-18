@@ -147,7 +147,7 @@
   border: 1px solid rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Card Entry Animation */
+/* 卡片进入动画 */
 @keyframes cardEnter {
   from {
     opacity: 0;

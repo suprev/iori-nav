@@ -371,45 +371,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const catalogId = link.getAttribute('data-id');
     const catalogName = link.textContent.trim();
     
-    // Visual feedback
+    // 视觉反馈
     const sitesGrid = document.getElementById('sitesGrid');
     if (!sitesGrid) return;
 
-    // Transition Out
+    // 渐隐动画
     sitesGrid.style.transition = 'opacity 0.15s ease-out';
     sitesGrid.style.opacity = '0';
 
     try {
-        // Construct API URL
+        // 构造 API URL
         let apiUrl = '/api/config?pageSize=10000';
         if (catalogId) {
             apiUrl += `&catalogId=${catalogId}`;
         }
         
         const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error('Network response was not ok');
+        if (!res.ok) throw new Error('网络请求失败');
         const data = await res.json();
         
-        if (data.code !== 200) throw new Error(data.message || 'API Error');
+        if (data.code !== 200) throw new Error(data.message || 'API 错误');
         
-        // Wait for fade out
+        // 等待渐隐动画完成
         await new Promise(resolve => setTimeout(resolve, 150));
 
-        // Reset grid opacity (cards will animate in)
+        // 重置网格透明度（卡片会通过动画逐个进入）
         sitesGrid.style.transition = 'none';
         sitesGrid.style.opacity = '1';
 
-        // Render Sites
+        // 渲染站点
         renderSites(data.data);
 
-        // Update Heading
+        // 更新标题
         updateHeading(null, catalogId ? catalogName : null, data.data.length);
 
-        // Update Active State in Navigation
+        // 更新导航激活状态
         updateNavigationState(href);
 
     } catch (err) {
-        console.error('Navigation failed', err);
+        console.error('导航跳转失败:', err);
         window.location.href = href;
     }
   });
@@ -418,15 +418,15 @@ document.addEventListener('DOMContentLoaded', function() {
       const sitesGrid = document.getElementById('sitesGrid');
       if (!sitesGrid) return;
       
-      // Determine current layout settings from DOM
+      // 从当前 DOM 中检测布局设置
       const isFrosted = document.body.innerHTML.includes('frosted-glass-effect'); 
       const previousContent = sitesGrid.innerHTML;
       const hadFrosted = previousContent.includes('frosted-glass-effect');
       
-      // Check grid cols
+      // 检测网格列数
       const isFiveCols = sitesGrid.className.includes('xl:grid-cols-5');
       
-      // Check hidden elements
+      // 检测隐藏元素设置（通过启发式方法检测）
       const firstCard = sitesGrid.querySelector('.site-card');
       const hideDesc = firstCard && !firstCard.querySelector('p.line-clamp-2');
       const hideLinks = firstCard && !firstCard.querySelector('.copy-btn');
@@ -440,14 +440,14 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       sites.forEach((site, index) => {
-        // Safe values
+        // 安全处理属性值
         const safeName = escapeHTML(site.name || '未命名');
         const safeUrl = normalizeUrl(site.url);
         const safeDesc = escapeHTML(site.desc || '暂无描述');
         const safeCatalog = escapeHTML(site.catelog || '未分类');
         const cardInitial = (safeName.charAt(0) || '站').toUpperCase();
         
-        // Logo
+        // Logo 处理
         let logoHtml = '';
         if (site.logo) {
              logoHtml = `<img src="${escapeHTML(site.logo)}" alt="${safeName}" class="w-10 h-10 rounded-lg object-cover bg-gray-100">`;
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
              logoHtml = `<div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-semibold text-lg shadow-inner">${cardInitial}</div>`;
         }
         
-        // Conditional Parts
+        // 条件渲染部分
         const descHtml = hideDesc ? '' : `<p class="mt-2 text-sm text-gray-600 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>`;
         
         const hasValidUrl = !!safeUrl;
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
                   ${safeCatalog}
                 </span>`;
         
-        // Classes
+        // 样式类处理
         const frostedClass = hadFrosted ? 'frosted-glass-effect' : '';
         const baseCardClass = hadFrosted
             ? 'site-card group rounded-xl overflow-hidden transition-all' 
@@ -484,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const card = document.createElement('div');
         card.className = `${baseCardClass} ${frostedClass} card-anim-enter`;
-        // Limit stagger to first 20 items to avoid long wait
+        // 设置交错动画延迟，最多处理前 20 个项目以避免等待过长
         const delay = Math.min(index, 20) * 30; 
         card.style.animationDelay = `${delay}ms`;
         
@@ -512,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         sitesGrid.appendChild(card);
         
-        // Re-bind copy button event
+        // 重新绑定复制按钮事件
         const copyBtn = card.querySelector('.copy-btn');
         if (copyBtn) {
             copyBtn.addEventListener('click', function(e) {
@@ -524,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 navigator.clipboard.writeText(url).then(() => {
                     showCopySuccess(this);
                 }).catch(() => {
-                    // Fallback
+                    // 备用复制方案
                     const textarea = document.createElement('textarea');
                     textarea.value = url;
                     textarea.style.position = 'fixed';
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function updateNavigationState(href) {
-        // Update Horizontal Menu
+        // 更新横向菜单
         const currentNav = document.getElementById('horizontalCategoryNav');
         const dropdown = document.getElementById('horizontalMoreDropdown');
         
@@ -553,38 +553,38 @@ document.addEventListener('DOMContentLoaded', function() {
             let oldActive = null;
             let newActive = null;
 
-            // Find old and new active items
+            // 查找旧的和新的激活项
             allLinks.forEach(link => {
                 if (getHref(link) === href) {
                     newActive = link;
                 } else if (link.classList.contains('font-semibold') && (link.classList.contains('bg-primary-600') || link.classList.contains('text-primary-700'))) {
-                    // This heuristic detects the currently active item based on classes
+                    // 基于类名识别当前激活的项目
                     oldActive = link;
                 }
             });
 
             if (newActive && oldActive && newActive !== oldActive) {
-                // Ensure originalClass is set
+                // 确保 originalClass 已设置
                 if (!oldActive.dataset.originalClass) oldActive.dataset.originalClass = oldActive.className;
                 if (!newActive.dataset.originalClass) newActive.dataset.originalClass = newActive.className;
 
-                // Swap the "Bar State" classes stored in originalClass
+                // 交换存储在 originalClass 中的“菜单栏状态”类名
                 const activeStateClass = oldActive.dataset.originalClass;
                 const inactiveStateClass = newActive.dataset.originalClass;
 
                 oldActive.dataset.originalClass = inactiveStateClass;
                 newActive.dataset.originalClass = activeStateClass;
                 
-                // Apply immediately so visual state updates, and checkOverflow sees correct width/styles
+                // 立即应用类名，以便视觉状态更新，且 checkOverflow 能获取到正确的宽度和样式
                 oldActive.className = inactiveStateClass;
                 newActive.className = activeStateClass;
             }
             
-             // Re-check overflow to re-distribute items and apply Dropdown/Bar styles based on new Active state
+             // 重新检查溢出情况，以重新分配项目并根据新的激活状态应用下拉菜单/菜单栏样式
              if (typeof checkOverflow === 'function') checkOverflow();
         }
         
-        // Update Sidebar
+        // 更新侧边栏
         const sidebar = document.getElementById('sidebar');
         if (sidebar) {
             const links = sidebar.querySelectorAll('a[href^="?catalog="]');
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
   }
 
-  // Helper helpers
+  // 辅助函数
   function escapeHTML(str) {
     if (!str) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
