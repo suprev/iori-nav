@@ -1025,16 +1025,44 @@ export async function onRequest(context) {
   }
   
   const safeWallpaperUrl = sanitizeUrl(layoutCustomWallpaper);
+  const defaultBgColor = '#fdf8f3';
+  
+  // 统一构建背景层逻辑
+  let bgLayerStyle = '';
   if (safeWallpaperUrl) {
       const blurStyle = layoutEnableBgBlur ? `filter: blur(${layoutBgBlurIntensity}px);` : '';
-      const bgLayerHtml = `<div style="position: fixed; inset: 0; z-index: -10; background-image: url('${safeWallpaperUrl}'); background-size: cover; background-attachment: fixed; background-position: center; ${blurStyle}"></div>`;
-      
-      html = html.replace('<body class="bg-secondary-50 font-sans text-gray-800">', `<body class="bg-secondary-50 font-sans text-gray-800 relative ${isCustomWallpaper ? 'custom-wallpaper' : ''}">${bgLayerHtml}`);
+      bgLayerStyle = `background-image: url('${safeWallpaperUrl}'); background-size: cover; background-position: center; ${blurStyle}`;
   } else {
-      // 即使没有壁纸，也可能需要 class 来标记默认状态，这里主要给 body 加 custom-wallpaper 类以便 CSS 选择器生效
-      // 但上面逻辑只有 safeWallpaperUrl 存在才加。
-      // 实际上 CSS body.custom-wallpaper 选择器依赖此。
+      bgLayerStyle = `background-color: ${defaultBgColor};`;
   }
+  
+  // 使用 transform 开启硬件加速，扩大范围至 -300px 以应对强力回弹
+  const bgLayerHtml = `<div id="fixed-background" style="position: fixed; top: -300px; left: -300px; right: -300px; bottom: -300px; z-index: -9999; ${bgLayerStyle} pointer-events: none; transform: translateZ(0); will-change: transform;"></div>`;
+  
+  // 注入全局样式：
+  // 1. html, body 禁止回弹
+  // 2. body 背景透明 (依靠 fixed div)
+  // 3. html 设置底色保险 (有壁纸时用黑色避免白边，无壁纸时用默认色)
+  const globalScrollCss = `
+    <style>
+      html {
+        overscroll-behavior: none;
+        background-color: ${safeWallpaperUrl ? '#000000' : defaultBgColor};
+        height: 100%;
+      }
+      body {
+        overscroll-behavior: none;
+        background-color: transparent !important;
+        min-height: 100%;
+        position: relative;
+      }
+    </style>
+  `;
+
+  html = html.replace('</head>', `${globalScrollCss}</head>`);
+  
+  // 替换 body 标签
+  html = html.replace('<body class="bg-secondary-50 font-sans text-gray-800">', `<body class="bg-secondary-50 font-sans text-gray-800 relative ${isCustomWallpaper ? 'custom-wallpaper' : ''}">${bgLayerHtml}`);
   
   // Inject Card CSS Variables
   const cardCssVars = `<style>:root { --card-padding: 1.25rem; --card-radius: ${layoutCardBorderRadius}px; --frosted-glass-blur: ${layoutFrostedGlassIntensity}px; }</style>`;
